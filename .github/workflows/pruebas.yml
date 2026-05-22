@@ -41,4 +41,40 @@ jobs:
       # ── STAGE 6: TESTS ────────────────────────────────────
       - name: Ejecutar Tests automatizados
         run: pnpm test
-      
+
+       # ✅ NOTIFICACIÓN SLACK - ÉXITO
+      - name: Notificar Slack - Éxito
+        if: success()
+        run: |
+          curl -s -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "✅ *Pipeline Exitoso - Vercel desplegando!*",
+            "attachments": [{
+              "color": "#36a64f",
+              "fields": [
+                {"title":"Repositorio", "value":"${{ github.repository }}", "short":true},
+                {"title":"Autor", "value":"${{ github.actor }}", "short":true},
+                {"title":"Commit", "value":"${{ github.sha }}", "short":true},
+                {"title":"Status", "value":"Tests OK ✅ → Deploy OK ✅", "short":false}
+              ]
+            }]
+          }'
+
+      # ❌ NOTIFICACIÓN SLACK - FALLA
+      - name: Notificar Slack - Falla
+        if: failure()
+        run: |
+          curl -s -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "❌ *Pipeline FALLIDO - Deploy CANCELADO*",
+            "attachments": [{
+              "color": "#ff0000",
+              "fields": [
+                {"title":"Repositorio", "value":"${{ github.repository }}", "short":true},
+                {"title":"Autor", "value":"${{ github.actor }}", "short":true},
+                {"title":"Commit", "value":"${{ github.sha }}", "short":true}
+              ]
+            }]
+          }'
