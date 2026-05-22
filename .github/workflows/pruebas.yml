@@ -41,9 +41,4 @@ jobs:
       # ── STAGE 6: TESTS ────────────────────────────────────
       - name: Ejecutar Tests automatizados
         run: pnpm test
-
-      # ── STAGE 7: DEPLOY ───────────────────────────────────
-      - name: 'notify vercel'
-        uses: 'vercel/repository-dispatch/actions/status@v1'
-        with:
-          name: "Vercel - ci-cd: CI/CD Pipeline Completo"
+      
