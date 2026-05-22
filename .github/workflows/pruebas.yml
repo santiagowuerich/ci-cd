@@ -52,3 +52,8 @@ jobs:
           echo 'Autor: ${{ github.actor }}'
           echo '=== DEPLOY COMPLETADO ==='
          
+      - name: Trigger Vercel Deploy
+        if: success()
+        run: |
+          curl -X POST -d '{}' ${{https://api.vercel.com/v1/integrations/deploy/prj_y0CHca9OZu7MWpG9FGMmFCWmRkrN/k6uXOsQB3F}}
+          echo '✅ Deploy a Vercel disparado'
