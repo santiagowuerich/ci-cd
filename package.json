@@ -4,7 +4,8 @@
   "description": "Proyecto de ejemplo para evaluación CI/CD",
   "scripts": {
     "test":  "jest",
-    "build": "echo Build exitoso"
+    "build": "echo Build exitoso",
+    "start": "node server.js"
   },
   "devDependencies": {
     "jest": "^29.0.0"
