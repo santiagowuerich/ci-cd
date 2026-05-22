@@ -1,0 +1,48 @@
+name: ci-cd pipelines
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs: 
+  ci-cd:
+    runs-on: ubuntu-latest
+  
+    steps:
+    - name: Obtenemos el codigo
+      uses: actions/checkout@v3
+    - name: Instalamos pnpm 
+      run: pnpm/action-setup@v2
+      with:
+        version: 8
+    - name: Configuramos Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+        cache: 'pnpm'
+    - name: Instalamos las dependencias
+      run: pnpm install
+      # Step 4: Instala dependencias
+      # --frozen-lockfile garantiza que se usen EXACTAMENTE
+      # las versiones del pnpm-lock.yaml (sin actualizaciones)
+    - name: Instalar dependencias
+      run: pnpm install --frozen-lockfile
+
+      # Step 5: Build del proyecto
+    - name: Ejecutar Build
+      run: pnpm run build
+
+      # Step 6: Pruebas automatizadas
+    - name: Ejecutar Tests
+      run: pnpm test
+    # Step 7: Deploy al entorno de entrega
+    - name: Deploy a entorno de entrega
+      if: success()
+      run: |
+          echo '=== DEPLOY INICIADO ==='
+          echo 'Repositorio: ${{ github.repository }}'
+          echo 'Commit: ${{ github.sha }}'
+          echo 'Autor: ${{ github.actor }}'
+          echo '=== DEPLOY COMPLETADO ==='
