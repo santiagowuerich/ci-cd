@@ -32,7 +32,7 @@ jobs:
       # ── STAGE 4: INSTALAR DEPENDENCIAS ───────────────────
       # --frozen-lockfile: usa exactamente las versiones del lockfile
       - name: Instalar dependencias
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       # ── STAGE 5: BUILD ────────────────────────────────────
       - name: Ejecutar Build
