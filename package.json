@@ -1,0 +1,15 @@
+{
+  "name": "proyecto-ci",
+  "version": "1.0.0",
+  "description": "Proyecto de ejemplo para evaluación CI/CD",
+  "scripts": {
+    "test":  "jest",
+    "build": "echo Build exitoso"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
