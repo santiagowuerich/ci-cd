@@ -1,4 +1,4 @@
-name: ci-cd pipelines
+name: CI/CD Pipeline Completo
 
 on:
   push:
@@ -6,41 +6,46 @@ on:
   pull_request:
     branches: [ main ]
 
-jobs: 
+jobs:
   ci-cd:
     runs-on: ubuntu-latest
-  
+
     steps:
-    - name: Obtenemos el codigo
-      uses: actions/checkout@v3
-    - name: Instalamos pnpm 
-      run: pnpm/action-setup@v2
-      with:
-        version: '8'
-    - name: Configuramos Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'pnpm'
-    - name: Instalamos las dependencias
-      run: pnpm install
-      # Step 4: Instala dependencias
-      # --frozen-lockfile garantiza que se usen EXACTAMENTE
-      # las versiones del pnpm-lock.yaml (sin actualizaciones)
-    - name: Instalar dependencias
-      run: pnpm install --frozen-lockfile
+      # ── STAGE 1: CHECKOUT ─────────────────────────────────
+      - name: Obtener código del repositorio
+        uses: actions/checkout@v3
 
-      # Step 5: Build del proyecto
-    - name: Ejecutar Build
-      run: pnpm run build
+      # ── STAGE 2: SETUP PNPM ──────────────────────────────
+      # IMPORTANTE: uses (no run), y antes que setup-node
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
 
-      # Step 6: Pruebas automatizadas
-    - name: Ejecutar Tests
-      run: pnpm test
-    # Step 7: Deploy al entorno de entrega
-    - name: Deploy a entorno de entrega
-      if: success()
-      run: |
+      # ── STAGE 3: SETUP NODE (con cache pnpm) ─────────────
+      - name: Configurar Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      # ── STAGE 4: INSTALAR DEPENDENCIAS ───────────────────
+      # --frozen-lockfile: usa exactamente las versiones del lockfile
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      # ── STAGE 5: BUILD ────────────────────────────────────
+      - name: Ejecutar Build
+        run: pnpm run build
+
+      # ── STAGE 6: TESTS ────────────────────────────────────
+      - name: Ejecutar Tests automatizados
+        run: pnpm test
+
+      # ── STAGE 7: DEPLOY ───────────────────────────────────
+      - name: Deploy a entorno de entrega
+        if: success()
+        run: |
           echo '=== DEPLOY INICIADO ==='
           echo 'Repositorio: ${{ github.repository }}'
           echo 'Commit: ${{ github.sha }}'
