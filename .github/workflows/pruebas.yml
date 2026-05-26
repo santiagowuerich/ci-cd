@@ -16,7 +16,6 @@ jobs:
         uses: actions/checkout@v3
 
       # ── STAGE 2: SETUP PNPM ──────────────────────────────
-      # IMPORTANTE: uses (no run), y antes que setup-node
       - name: Instalar pnpm
         uses: pnpm/action-setup@v2
         with:
@@ -41,7 +40,7 @@ jobs:
       # ── STAGE 6: TESTS ────────────────────────────────────
       - name: Ejecutar Tests automatizados
         run: pnpm test
-
+      # ── STAGE 7- EXTRAER ISSUE KEY DE JIRA ────────────────────────────────────
       - name: Extraer issue key de Jira
         id: jira
         if: always()
