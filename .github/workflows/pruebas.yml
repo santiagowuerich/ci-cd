@@ -56,6 +56,7 @@ jobs:
                 {"title":"Repositorio", "value":"${{ github.repository }}", "short":true},
                 {"title":"Autor", "value":"${{ github.actor }}", "short":true},
                 {"title":"Commit", "value":"${{ github.sha }}", "short":true},
+                {"title":"Comentario del commit", "value":"${{ github.event.head_commit.message }}", "short":false}
                 {"title":"Status", "value":"Tests OK ✅ → Deploy OK ✅", "short":false}
               ]
             }]
@@ -75,6 +76,8 @@ jobs:
                 {"title":"Repositorio", "value":"${{ github.repository }}", "short":true},
                 {"title":"Autor", "value":"${{ github.actor }}", "short":true},
                 {"title":"Commit", "value":"${{ github.sha }}", "short":true}
+                {"title":"Comentario del commit", "value":"${{ github.event.head_commit.message }}", "short":false}
+                {"title":"Status", "value":"Tests OK ✅ → Deploy OK ✅", "short":false}
               ]
             }]
           }'
