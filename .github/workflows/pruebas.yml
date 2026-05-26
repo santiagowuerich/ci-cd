@@ -78,3 +78,57 @@ jobs:
               ]
             }]
           }'
+
+       # ── JIRA: COMENTARIO SI EL PIPELINE FUE EXITOSO ───
+      - name: Comentar en Jira - Éxito
+        if: success() && steps.jira.outputs.issue_key != ''
+        run: |
+          curl -s -X POST \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.jira.outputs.issue_key }}/comment" \
+            --data '{
+              "body": {
+                "type": "doc",
+                "version": 1,
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "✅ Pipeline exitoso en GitHub Actions. Build, tests y deploy completados correctamente."
+                      }
+                    ]
+                  }
+                ]
+              }
+            }'
+
+      # ── JIRA: COMENTARIO SI EL PIPELINE FALLÓ ─────────
+      - name: Comentar en Jira - Falla
+        if: failure() && steps.jira.outputs.issue_key != ''
+        run: |
+          curl -s -X POST \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.jira.outputs.issue_key }}/comment" \
+            --data '{
+              "body": {
+                "type": "doc",
+                "version": 1,
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "❌ Pipeline fallido en GitHub Actions. Revisar los logs de build, tests o deploy."
+                      }
+                    ]
+                  }
+                ]
+              }
+            }'
