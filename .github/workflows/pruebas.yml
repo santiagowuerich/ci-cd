@@ -2,9 +2,14 @@ name: CI/CD Pipeline Completo
 
 on:
   push:
-    branches: [ main ]
+    branches: 
+      - main
+      - develop
+      - 'JIRA-*'
   pull_request:
-    branches: [ main ]
+    branches: 
+      - main
+      - develop
 
 jobs:
   ci-cd:
