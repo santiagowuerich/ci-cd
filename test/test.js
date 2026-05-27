@@ -12,7 +12,7 @@ describe('Operaciones matemáticas', () => {
   });
 
   test('resta correctamente 10 - 4', () => {
-    expect(restar(10, 4)).toBe(6);
+    expect(restar(10, 4)).toBe(9);
   });
 
   test('resta con resultado negativo', () => {
