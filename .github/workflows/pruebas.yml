@@ -53,9 +53,7 @@ jobs:
           ISSUE_KEY=$(echo "${{ steps.commit.outputs.message }} ${{ github.ref_name }}" | grep -oE '${{ secrets.JIRA_PROJECT_KEY }}-[0-9]+' | head -1)
           echo "issue_key=$ISSUE_KEY" >> $GITHUB_OUTPUT
           echo "Issue Jira detectado: $ISSUE_KEY"
-
-
-       # ✅ NOTIFICACIÓN SLACK - ÉXITO
+      # ✅ NOTIFICACIÓN SLACK - ÉXITO
       - name: Notificar Slack - Éxito
         if: success()
         run: |
