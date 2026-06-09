@@ -45,35 +45,48 @@ jobs:
       # ── STAGE 6: TESTS ────────────────────────────────────
       - name: Ejecutar Tests automatizados
         run: pnpm test
-      # ── STAGE 7- EXTRAER ISSUE KEY DE JIRA ────────────────────────────────────
+
+      # ── STAGE 7: EXTRAER ISSUE KEY DE JIRA ────────────────────────────────────
       - name: Extraer issue key de Jira
         id: jira
         if: always()
+        env:
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
         run: |
-          ISSUE_KEY=$(echo "${{ steps.commit.outputs.message }} ${{ github.ref_name }}" | grep -oE '${{ secrets.JIRA_PROJECT_KEY }}-[0-9]+' | head -1)
+          ISSUE_KEY=$(echo "${{ github.ref_name }}" | grep -oE "${JIRA_PROJECT_KEY}-[0-9]+" | head -1)
           echo "issue_key=$ISSUE_KEY" >> $GITHUB_OUTPUT
           echo "Issue Jira detectado: $ISSUE_KEY"
+
       # ── STAGE 8: DEPLOY A VERCEL (solo si los tests pasan) ─────────────────
       - name: Deploy a Vercel
         if: success() && github.ref == 'refs/heads/main'
-        run: curl -X POST ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        env:
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: curl -X POST "$VERCEL_DEPLOY_HOOK"
       
       # ✅ NOTIFICACIÓN SLACK - ÉXITO
       - name: Notificar Slack - Éxito
         if: success()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-          curl -s -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
           -H 'Content-type: application/json' \
           --data '{
             "text": "✅ *Pipeline Exitoso - Vercel desplegando!*",
             "attachments": [{
               "color": "#36a64f",
               "fields": [
-                {"title":"Repositorio", "value":"${{ github.repository }}", "short":true},
-                {"title":"Autor", "value":"${{ github.actor }}", "short":true},
-                {"title":"Rama", "value":"${{ github.ref_name }}", "short":true},
-                {"title":"Commit", "value":"${{ github.sha }}", "short":true},
-                {"title":"Comentario del commit", "value":"${{ github.event.head_commit.message }}", "short":false},
+                {"title":"Repositorio", "value":"'"$REPO"'", "short":true},
+                {"title":"Autor", "value":"'"$ACTOR"'", "short":true},
+                {"title":"Rama", "value":"'"$BRANCH"'", "short":true},
+                {"title":"Commit", "value":"'"$COMMIT"'", "short":true},
+                {"title":"Comentario del commit", "value":"'"$MESSAGE"'", "short":false},
                 {"title":"Status", "value":"Tests OK ✅ → Deploy OK ✅", "short":false}
               ]
             }]
@@ -82,33 +95,45 @@ jobs:
       # ❌ NOTIFICACIÓN SLACK - FALLA
       - name: Notificar Slack - Falla
         if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-          curl -s -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
           -H 'Content-type: application/json' \
           --data '{
             "text": "❌ *Pipeline FALLIDO - Deploy CANCELADO*",
             "attachments": [{
               "color": "#ff0000",
               "fields": [
-                {"title":"Repositorio", "value":"${{ github.repository }}", "short":true},
-                {"title":"Autor", "value":"${{ github.actor }}", "short":true},
-                {"title":"Rama", "value":"${{ github.ref_name }}", "short":true},
-                {"title":"Commit", "value":"${{ github.sha }}", "short":true},
-                {"title":"Comentario del commit", "value":"${{ github.event.head_commit.message }}", "short":false},
+                {"title":"Repositorio", "value":"'"$REPO"'", "short":true},
+                {"title":"Autor", "value":"'"$ACTOR"'", "short":true},
+                {"title":"Rama", "value":"'"$BRANCH"'", "short":true},
+                {"title":"Commit", "value":"'"$COMMIT"'", "short":true},
+                {"title":"Comentario del commit", "value":"'"$MESSAGE"'", "short":false},
                 {"title":"Status", "value":"Pipeline fallido ❌ → Deploy cancelado", "short":false}
               ]
             }]
           }'
 
-       # ── JIRA: COMENTARIO SI EL PIPELINE FUE EXITOSO ───
+      # ── JIRA: COMENTARIO SI EL PIPELINE FUE EXITOSO ───
       - name: Comentar en Jira - Éxito
         if: success() && steps.jira.outputs.issue_key != ''
+        env:
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          ISSUE_KEY: ${{ steps.jira.outputs.issue_key }}
         run: |
           curl -s -X POST \
-            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
-            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.jira.outputs.issue_key }}/comment" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/comment" \
             --data '{
               "body": {
                 "type": "doc",
@@ -130,12 +155,17 @@ jobs:
       # ── JIRA: COMENTARIO SI EL PIPELINE FALLÓ ─────────
       - name: Comentar en Jira - Falla
         if: failure() && steps.jira.outputs.issue_key != ''
+        env:
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          ISSUE_KEY: ${{ steps.jira.outputs.issue_key }}
         run: |
           curl -s -X POST \
-            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
-            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.jira.outputs.issue_key }}/comment" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/comment" \
             --data '{
               "body": {
                 "type": "doc",
