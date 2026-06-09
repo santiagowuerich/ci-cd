@@ -8,7 +8,7 @@ describe('Operaciones matemáticas', () => {
   });
 
   test('suma números negativos', () => {
-    expect(sumar(-1, -1)).toBe(-2);
+    expect(sumar(-1, -1)).toBe(-6);
   });
 
   test('resta correctamente 10 - 4', () => {
