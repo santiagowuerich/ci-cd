@@ -53,6 +53,11 @@ jobs:
           ISSUE_KEY=$(echo "${{ steps.commit.outputs.message }} ${{ github.ref_name }}" | grep -oE '${{ secrets.JIRA_PROJECT_KEY }}-[0-9]+' | head -1)
           echo "issue_key=$ISSUE_KEY" >> $GITHUB_OUTPUT
           echo "Issue Jira detectado: $ISSUE_KEY"
+      # ── STAGE 8: DEPLOY A VERCEL (solo si los tests pasan) ─────────────────
+      - name: Deploy a Vercel
+        if: success() && github.ref == 'refs/heads/main'
+        run: curl -X POST ${{ secrets.VERCEL_DEPLOY_HOOK }}
+      
       # ✅ NOTIFICACIÓN SLACK - ÉXITO
       - name: Notificar Slack - Éxito
         if: success()
