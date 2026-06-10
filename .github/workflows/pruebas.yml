@@ -44,7 +44,7 @@ jobs:
 
       # ── STAGE 6: TESTS ────────────────────────────────────
       - name: Ejecutar Tests automatizados
-        run: pnpm test -- --coverage --testPathPattern=__tests__
+        run: pnpm test -- --coverage
 
       # ── STAGE 6.5: TESTS ────────────────────────────────────
       - name: Analizar con SonarCloud
