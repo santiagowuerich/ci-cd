@@ -46,7 +46,7 @@ jobs:
       - name: Ejecutar Tests automatizados
         run: pnpm test -- --coverage
 
-      # ── STAGE 6.5: TESTS ────────────────────────────────────
+      # ── STAGE 6.5: SONARCLOUD ANALYSIS ────────────────────────────────────
       - name: Analizar con SonarCloud
         uses: SonarSource/sonarcloud-github-action@master
         env:
