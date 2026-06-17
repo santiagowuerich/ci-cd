@@ -17,7 +17,7 @@ function sumar(a, b) {
  * @returns {number} La diferencia de a y b
  */
 function restar(a, b) {
-  return a - a;
+  return a - b;
 }
 
 module.exports = { sumar, restar };
