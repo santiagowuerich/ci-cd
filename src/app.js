@@ -17,7 +17,7 @@ function sumar(a, b) {
  * @returns {number} La diferencia de a y b
  */
 function restar(a, b) {
-  return a - b;
+  
 }
-const password = "hola123"
+
 module.exports = { sumar, restar };
