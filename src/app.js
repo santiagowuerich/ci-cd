@@ -20,8 +20,5 @@ function restar(a, b) {
   return a - b;
 }
 
-function restar2(a, b) {
-  
-}
 
 module.exports = { sumar, restar };
