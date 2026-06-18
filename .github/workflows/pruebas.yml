@@ -71,10 +71,16 @@ jobs:
           echo "Issue Jira detectado: $ISSUE_KEY"
 
       # ── STAGE 8: DEPLOY A VERCEL (solo si los tests pasan y sonarqube tambien) ─────────────────
-      - name: Deploy a Vercel
+      - name: Deploy a Vercel (Develop)
+        if: success() && github.ref == 'refs/heads/develop'
+        env:
+          VERCEL_DEPLOY_HOOK_DEVELOP: ${{ secrets.VERCEL_DEPLOY_HOOK_DEVELOP }}
+        run: curl -X POST "$VERCEL_DEPLOY_HOOK_DEVELOP"
+
+      - name: Deploy a Vercel (Main)
         if: success() && github.ref == 'refs/heads/main'
         env:
-          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+          VERCEL_DEPLOY_HOOK_MAIN: ${{ secrets.VERCEL_DEPLOY_HOOK }}
         run: curl -X POST "$VERCEL_DEPLOY_HOOK"
       
       # ✅ NOTIFICACIÓN SLACK - ÉXITO
