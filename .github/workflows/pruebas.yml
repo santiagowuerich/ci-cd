@@ -70,7 +70,7 @@ jobs:
           echo "issue_key=$ISSUE_KEY" >> $GITHUB_OUTPUT
           echo "Issue Jira detectado: $ISSUE_KEY"
 
-      # ── STAGE 8: DEPLOY A VERCEL (solo si los tests pasan y sonarqube tambien) ─────────────────
+      # ── STAGE 8: DEPLOY A VERCEL (solo si los tests pasan y sonarqube) ─────────────────
       - name: Deploy a Vercel
         if: success() && github.ref == 'refs/heads/main'
         env:
