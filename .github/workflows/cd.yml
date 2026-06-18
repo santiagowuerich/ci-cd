@@ -27,7 +27,7 @@ jobs:
         if: github.event.workflow_run.head_branch == 'develop'
         env:
           VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_DEVELOP }}
-        run: curl -X POST "$VERCEL_DEPLOY_HOOK"
+        run: curl -X POST "$VERCEL_DEPLOY_HOOK_DEVELOP"
 
       # ✅ NOTIFICACIÓN SLACK - DEPLOY ÉXITO
       - name: Notificar Slack - Deploy Exitoso
