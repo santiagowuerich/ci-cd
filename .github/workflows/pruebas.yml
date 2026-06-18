@@ -34,7 +34,6 @@ jobs:
           cache: 'pnpm'
 
       # ── STAGE 4: INSTALAR DEPENDENCIAS ───────────────────
-      # --frozen-lockfile: usa exactamente las versiones del lockfile
       - name: Instalar dependencias
         run: pnpm install
 

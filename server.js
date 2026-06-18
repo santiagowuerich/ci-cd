@@ -1,5 +1,5 @@
 // server.js
-// Servidor HTTP simple para Render
+// Servidor HTTP simple para vercel
 const http = require('http');
 
 const server = http.createServer((req, res) => {
