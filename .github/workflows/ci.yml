@@ -1,0 +1,169 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: 
+      - main
+      - develop
+      - 'JIRA-*'
+  pull_request:
+    branches: 
+      - main
+      - develop
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── STAGE 1: CHECKOUT ─────────────────────────────────
+      - name: Obtener código del repositorio
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # ── STAGE 2: SETUP PNPM ──────────────────────────────
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      # ── STAGE 3: SETUP NODE ───────────────────────────────
+      - name: Configurar Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      # ── STAGE 4: INSTALAR DEPENDENCIAS ───────────────────
+      - name: Instalar dependencias
+        run: pnpm install
+
+      # ── STAGE 5: BUILD ────────────────────────────────────
+      - name: Ejecutar Build
+        run: pnpm run build
+
+      # ── STAGE 6: TESTS ────────────────────────────────────
+      - name: Ejecutar Tests automatizados
+        run: pnpm test -- --coverage
+
+      # ── STAGE 7: SONARCLOUD ───────────────────────────────
+      - name: Analizar con SonarCloud
+        if: ${{ env.SONAR_TOKEN != '' }}
+        continue-on-error: true
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+      # ── STAGE 8: EXTRAER ISSUE KEY DE JIRA ───────────────
+      - name: Extraer issue key de Jira
+        id: jira
+        if: always()
+        env:
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+        run: |
+          ISSUE_KEY=$(echo "${{ github.ref_name }}" | grep -oE "${JIRA_PROJECT_KEY}-[0-9]+" | head -1)
+          echo "issue_key=$ISSUE_KEY" >> $GITHUB_OUTPUT
+          echo "Issue Jira detectado: $ISSUE_KEY"
+
+      # ✅ NOTIFICACIÓN SLACK - ÉXITO
+      - name: Notificar Slack - Éxito
+        if: success()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "✅ *CI Exitoso - Listo para deploy!*",
+            "attachments": [{
+              "color": "#36a64f",
+              "fields": [
+                {"title":"Repositorio", "value":"'"$REPO"'", "short":true},
+                {"title":"Autor", "value":"'"$ACTOR"'", "short":true},
+                {"title":"Rama", "value":"'"$BRANCH"'", "short":true},
+                {"title":"Commit", "value":"'"$COMMIT"'", "short":true},
+                {"title":"Comentario del commit", "value":"'"$MESSAGE"'", "short":false},
+                {"title":"Status", "value":"Tests OK ✅ → SonarCloud OK ✅", "short":false}
+              ]
+            }]
+          }'
+
+      # ❌ NOTIFICACIÓN SLACK - FALLA
+      - name: Notificar Slack - Falla
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "❌ *CI FALLIDO - Deploy cancelado*",
+            "attachments": [{
+              "color": "#ff0000",
+              "fields": [
+                {"title":"Repositorio", "value":"'"$REPO"'", "short":true},
+                {"title":"Autor", "value":"'"$ACTOR"'", "short":true},
+                {"title":"Rama", "value":"'"$BRANCH"'", "short":true},
+                {"title":"Commit", "value":"'"$COMMIT"'", "short":true},
+                {"title":"Comentario del commit", "value":"'"$MESSAGE"'", "short":false},
+                {"title":"Status", "value":"CI fallido ❌ → Deploy cancelado", "short":false}
+              ]
+            }]
+          }'
+
+      # ── JIRA: COMENTARIO ÉXITO ────────────────────────────
+      - name: Comentar en Jira - Éxito
+        if: success() && steps.jira.outputs.issue_key != ''
+        env:
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          ISSUE_KEY: ${{ steps.jira.outputs.issue_key }}
+        run: |
+          curl -s -X POST \
+            -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/comment" \
+            --data '{
+              "body": {
+                "type": "doc",
+                "version": 1,
+                "content": [{"type": "paragraph","content": [{"type": "text","text": "✅ CI exitoso. Build, tests y análisis completados."}]}]
+              }
+            }'
+
+      # ── JIRA: COMENTARIO FALLA ────────────────────────────
+      - name: Comentar en Jira - Falla
+        if: failure() && steps.jira.outputs.issue_key != ''
+        env:
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          ISSUE_KEY: ${{ steps.jira.outputs.issue_key }}
+        run: |
+          curl -s -X POST \
+            -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue/$ISSUE_KEY/comment" \
+            --data '{
+              "body": {
+                "type": "doc",
+                "version": 1,
+                "content": [{"type": "paragraph","content": [{"type": "text","text": "❌ CI fallido. Revisar logs de build, tests o SonarCloud."}]}]
+              }
+            }'
