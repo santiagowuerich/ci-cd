@@ -49,18 +49,17 @@ jobs:
 
       
       # ── STAGE 6.5: SONARCLOUD ANALYSIS ────────────────────────────────────
-      - name: Analizar con SonarCloud
-        uses: SonarSource/sonarcloud-github-action@master
+      - name: SonarQube Scan
+        id: sonar
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Wait for SonarCloud Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@master
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONARQUBE_HOST_URL: https://sonarcloud.io
+          SONAR_HOST_URL: https://sonarcloud.io   # ← AGREGÁ ESTO
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true
 
       # ── STAGE 7: EXTRAER ISSUE KEY DE JIRA ────────────────────────────────────
       - name: Extraer issue key de Jira
