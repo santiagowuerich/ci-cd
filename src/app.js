@@ -19,5 +19,5 @@ function sumar(a, b) {
 function restar(a, b) {
   return a - b;
 }
-
+const password = "hola123"
 module.exports = { sumar, restar };
