@@ -2,33 +2,71 @@ name: CD Pipeline
 
 on:
   workflow_run:
-    workflows: [CI Pipeline]
-    types: [completed]
+    workflows: ["CI Pipeline"]   # ← Nombre exacto del ci.yml
+    types:
+      - completed
+    branches:
+      - main
+      - develop
 
 jobs:
-  deploy:
+  cd:
     runs-on: ubuntu-latest
-
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      (
-        github.event.workflow_run.head_branch == 'main' ||
-        github.event.workflow_run.head_branch == 'develop'
-      )
+    # Solo corre si el CI pasó exitosamente
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Deploy a Vercel
+      # ── DEPLOY A VERCEL ───────────────────────────────────
+      - name: Deploy a Vercel (Main)
+        if: github.event.workflow_run.head_branch == 'main'
         env:
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: curl -X POST "$VERCEL_DEPLOY_HOOK"
+
+      - name: Deploy a Vercel (Develop)
+        if: github.event.workflow_run.head_branch == 'develop'
+        env:
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_DEVELOP }}
+        run: curl -X POST "$VERCEL_DEPLOY_HOOK"
+
+      # ✅ NOTIFICACIÓN SLACK - DEPLOY ÉXITO
+      - name: Notificar Slack - Deploy Exitoso
+        if: success()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           BRANCH: ${{ github.event.workflow_run.head_branch }}
-          HOOK_MAIN: ${{ secrets.VERCEL_DEPLOY_HOOK }}
-          HOOK_DEVELOP: ${{ secrets.VERCEL_DEPLOY_HOOK_DEVELOP }}
+          ACTOR: ${{ github.event.workflow_run.actor.login }}
         run: |
-          if [ "$BRANCH" = "main" ]; then
-            HOOK="$HOOK_MAIN"
-          else
-            HOOK="$HOOK_DEVELOP"
-          fi
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "🚀 *Deploy exitoso a Vercel!*",
+            "attachments": [{
+              "color": "#36a64f",
+              "fields": [
+                {"title":"Rama", "value":"'"$BRANCH"'", "short":true},
+                {"title":"Autor", "value":"'"$ACTOR"'", "short":true},
+                {"title":"Status", "value":"Deploy OK ✅", "short":false}
+              ]
+            }]
+          }'
 
-          curl --fail --show-error --request POST "$HOOK"
-
+      # ❌ NOTIFICACIÓN SLACK - DEPLOY FALLA
+      - name: Notificar Slack - Deploy Fallido
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "❌ *Deploy FALLIDO en Vercel!*",
+            "attachments": [{
+              "color": "#ff0000",
+              "fields": [
+                {"title":"Rama", "value":"'"$BRANCH"'", "short":true},
+                {"title":"Status", "value":"Deploy fallido ❌", "short":false}
+              ]
+            }]
+          }'
