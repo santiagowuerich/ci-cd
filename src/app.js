@@ -17,6 +17,10 @@ function sumar(a, b) {
  * @returns {number} La diferencia de a y b
  */
 function restar(a, b) {
+  return a - b;
+}
+
+function restar2(a, b) {
   
 }
 
