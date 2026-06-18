@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Deploy Main
         if: github.event.workflow_run.head_branch == 'main'
-        run: curl --fail -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_MAIN }}"
+        run: curl --fail -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
 
       - name: Deploy Develop
         if: github.event.workflow_run.head_branch == 'develop'
