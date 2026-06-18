@@ -1,0 +1,49 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows:
+      - CI Pipeline
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+
+    steps:
+      - name: Deploy Main
+        if: github.event.workflow_run.head_branch == 'main'
+        run: curl --fail -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_MAIN }}"
+
+      - name: Deploy Develop
+        if: github.event.workflow_run.head_branch == 'develop'
+        run: curl --fail -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_DEVELOP }}"
+
+      - name: Notificar Slack - Éxito
+        if: success()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"text\": \"🚀 Deploy solicitado correctamente en la rama $BRANCH\"
+            }"
+
+      - name: Notificar Slack - Falla
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"text\": \"❌ Falló el deploy de la rama $BRANCH\"
+            }"

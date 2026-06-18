@@ -1,4 +1,4 @@
-name: CI/CD Pipeline Completo
+name: CI Pipeline
 
 on:
   push:
@@ -12,13 +12,15 @@ on:
       - develop
 
 jobs:
-  ci-cd:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
       # ── STAGE 1: CHECKOUT ─────────────────────────────────
       - name: Obtener código del repositorio
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       # ── STAGE 2: SETUP PNPM ──────────────────────────────
       - name: Instalar pnpm
@@ -26,7 +28,7 @@ jobs:
         with:
           version: 8
 
-      # ── STAGE 3: SETUP NODE (con cache pnpm) ─────────────
+      # ── STAGE 3: SETUP NODE ───────────────────────────────
       - name: Configurar Node.js 18
         uses: actions/setup-node@v3
         with:
@@ -45,21 +47,17 @@ jobs:
       - name: Ejecutar Tests automatizados
         run: pnpm test -- --coverage
 
-      # ── STAGE 6.5: SONARCLOUD ANALYSIS ────────────────────────────────────
+      # ── STAGE 7: SONARCLOUD ───────────────────────────────
       - name: Analizar con SonarCloud
-        uses: SonarSource/sonarcloud-github-action@master
+        if: ${{ env.SONAR_TOKEN != '' }}
+        continue-on-error: true
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
 
-      #- name: Wait for SonarCloud Quality Gate
-      #  uses: SonarSource/sonarqube-quality-gate-action@master
-      #  timeout-minutes: 5
-      #  env:
-      #    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #    SONARQUBE_HOST_URL: https://sonarcloud.io
-
-      # ── STAGE 7: EXTRAER ISSUE KEY DE JIRA ────────────────────────────────────
+      # ── STAGE 8: EXTRAER ISSUE KEY DE JIRA ───────────────
       - name: Extraer issue key de Jira
         id: jira
         if: always()
@@ -70,13 +68,6 @@ jobs:
           echo "issue_key=$ISSUE_KEY" >> $GITHUB_OUTPUT
           echo "Issue Jira detectado: $ISSUE_KEY"
 
-      # ── STAGE 8: DEPLOY A VERCEL (solo si los tests pasan y sonarqube tambien) ─────────────────
-      - name: Deploy a Vercel
-        if: success() && github.ref == 'refs/heads/main'
-        env:
-          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
-        run: curl -X POST "$VERCEL_DEPLOY_HOOK"
-      
       # ✅ NOTIFICACIÓN SLACK - ÉXITO
       - name: Notificar Slack - Éxito
         if: success()
@@ -91,7 +82,7 @@ jobs:
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
           -H 'Content-type: application/json' \
           --data '{
-            "text": "✅ *Pipeline Exitoso - Vercel desplegando!*",
+            "text": "✅ *CI Exitoso - Listo para deploy!*",
             "attachments": [{
               "color": "#36a64f",
               "fields": [
@@ -100,7 +91,7 @@ jobs:
                 {"title":"Rama", "value":"'"$BRANCH"'", "short":true},
                 {"title":"Commit", "value":"'"$COMMIT"'", "short":true},
                 {"title":"Comentario del commit", "value":"'"$MESSAGE"'", "short":false},
-                {"title":"Status", "value":"Tests OK ✅ → Deploy OK ✅", "short":false}
+                {"title":"Status", "value":"Tests OK ✅ → SonarCloud OK ✅", "short":false}
               ]
             }]
           }'
@@ -119,7 +110,7 @@ jobs:
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
           -H 'Content-type: application/json' \
           --data '{
-            "text": "❌ *Pipeline FALLIDO - Deploy CANCELADO*",
+            "text": "❌ *CI FALLIDO - Deploy cancelado*",
             "attachments": [{
               "color": "#ff0000",
               "fields": [
@@ -128,12 +119,12 @@ jobs:
                 {"title":"Rama", "value":"'"$BRANCH"'", "short":true},
                 {"title":"Commit", "value":"'"$COMMIT"'", "short":true},
                 {"title":"Comentario del commit", "value":"'"$MESSAGE"'", "short":false},
-                {"title":"Status", "value":"Pipeline fallido ❌ → Deploy cancelado", "short":false}
+                {"title":"Status", "value":"CI fallido ❌ → Deploy cancelado", "short":false}
               ]
             }]
           }'
 
-      # ── JIRA: COMENTARIO SI EL PIPELINE FUE EXITOSO ───
+      # ── JIRA: COMENTARIO ÉXITO ────────────────────────────
       - name: Comentar en Jira - Éxito
         if: success() && steps.jira.outputs.issue_key != ''
         env:
@@ -151,21 +142,11 @@ jobs:
               "body": {
                 "type": "doc",
                 "version": 1,
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "content": [
-                      {
-                        "type": "text",
-                        "text": "✅ Pipeline exitoso en GitHub Actions. Build, tests y deploy completados correctamente."
-                      }
-                    ]
-                  }
-                ]
+                "content": [{"type": "paragraph","content": [{"type": "text","text": "✅ CI exitoso. Build, tests y análisis completados."}]}]
               }
             }'
 
-      # ── JIRA: COMENTARIO SI EL PIPELINE FALLÓ ─────────
+      # ── JIRA: COMENTARIO FALLA ────────────────────────────
       - name: Comentar en Jira - Falla
         if: failure() && steps.jira.outputs.issue_key != ''
         env:
@@ -183,16 +164,6 @@ jobs:
               "body": {
                 "type": "doc",
                 "version": 1,
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "content": [
-                      {
-                        "type": "text",
-                        "text": "❌ Pipeline fallido en GitHub Actions. Revisar los logs de build, tests o deploy."
-                      }
-                    ]
-                  }
-                ]
+                "content": [{"type": "paragraph","content": [{"type": "text","text": "❌ CI fallido. Revisar logs de build, tests o SonarCloud."}]}]
               }
             }'
