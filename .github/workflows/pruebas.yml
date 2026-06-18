@@ -19,6 +19,8 @@ jobs:
       # ── STAGE 1: CHECKOUT ─────────────────────────────────
       - name: Obtener código del repositorio
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       # ── STAGE 2: SETUP PNPM ──────────────────────────────
       - name: Instalar pnpm
@@ -48,13 +50,14 @@ jobs:
       
       # ── STAGE 6.5: SONARCLOUD ANALYSIS ────────────────────────────────────
       - name: Analizar con SonarCloud
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
         with:
-          args: -Dsonar.qualitygate.wait=true
+          args: >
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
 
       # ── STAGE 7: EXTRAER ISSUE KEY DE JIRA ────────────────────────────────────
       - name: Extraer issue key de Jira
